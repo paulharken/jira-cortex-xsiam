@@ -137,9 +137,9 @@ configuration:
     name: sync_issues
     type: 8  # boolean
     required: false
-    defaultvalue: "true"
+    defaultvalue: "false"
     section: Collect
-    additionalinfo: "Sync assigned Cortex issues (not linked to cases) to Jira. Disable to only sync cases."
+    additionalinfo: "Sync assigned Cortex issues (not linked to cases) to Jira. Enable to sync issues in addition to cases."
 
   - display: Max Cases Per Cycle
     name: max_sync_cases

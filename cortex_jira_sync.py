@@ -88,7 +88,7 @@ class Config:
             resolution_type_map=params.get("resolution_type_map", "{}"),
             default_resolution_type=params.get("default_resolution_type", "Resolved - Other"),
             max_sync_cases=int(params.get("max_sync_cases", "0")),
-            sync_issues=params.get("sync_issues", True),
+            sync_issues=params.get("sync_issues", False),
         )
 
     def validate(self) -> list[str]:

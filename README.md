@@ -84,7 +84,7 @@ All config is set via XSIAM integration parameters (no `.env` file):
 | `jira_xdr_url_field` | No | Custom field ID for XDR URL |
 | `resolution_type_map` | No | JSON: Jira status -> Cortex resolve_reason |
 | `default_resolution_type` | No | Fallback resolve reason (default: `Resolved - Other`) |
-| `sync_issues` | No | Sync standalone issues to Jira (default: `true`). Disable to only sync cases. |
+| `sync_issues` | No | Sync standalone issues to Jira (default: `false`). Enable to sync issues in addition to cases. |
 | `max_sync_cases` | No | Max tickets per cycle (default: `0` = unlimited) |
 
 ## Resolution Type Map
