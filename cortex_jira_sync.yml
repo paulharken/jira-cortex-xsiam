@@ -183,3 +183,7 @@ script:
     - name: cortex-jira-reset-state
       description: "Reset all integration state. Next sync will be a full initial sync. Use with caution."
       arguments: []
+
+    - name: cortex-jira-discover-resolutions
+      description: "Discover Cortex resolve_reason values from resolved cases and cross-check against Jira workflow statuses. Outputs a ready-to-use resolution_type_map."
+      arguments: []

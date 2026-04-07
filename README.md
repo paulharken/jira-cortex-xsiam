@@ -174,6 +174,18 @@ Unmapped statuses fall back to `default_resolution_type`.
 | `!cortex-jira-sync` | Manually trigger a full sync cycle |
 | `!cortex-jira-status` | Show current state: open/closed counts, retry queue, last poll times |
 | `!cortex-jira-reset-state` | Clear all state — next sync does a full initial pull. **Use with caution.** |
+| `!cortex-jira-discover-resolutions` | Discover Cortex resolve reasons and cross-check against Jira workflow statuses |
+
+### Resolution Type Discovery
+
+Run `!cortex-jira-discover-resolutions` to automatically build your `resolution_type_map`. The command:
+
+1. Fetches all resolved cases from Cortex and extracts unique `resolve_reason` values
+2. Strips the `Resolved - ` prefix to derive expected Jira status names
+3. Fetches your Jira project's workflow statuses and cross-checks for matches
+4. Outputs a ready-to-paste JSON map and flags any missing Jira statuses you need to create
+
+This is useful during initial setup to ensure your Jira workflow statuses align with Cortex resolution types. Any missing statuses should be added to your Jira workflow before enabling bidirectional closure.
 
 ### Troubleshooting
 

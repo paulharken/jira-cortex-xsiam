@@ -331,6 +331,23 @@ class JiraClient:
         resp.raise_for_status()
         demisto.debug(f"Assigned {issue_key} to {account_id}")
 
+    def get_project_statuses(self) -> list[str]:
+        """Get all workflow status names for the configured project and issue type."""
+        url = f"{self.base_url}/rest/api/3/project/{self.project_key}/statuses"
+        resp = self._request("GET", url)
+        resp.raise_for_status()
+        statuses: set[str] = set()
+        for issuetype in resp.json():
+            if issuetype.get("name", "").lower() == self.issue_type.lower():
+                for status in issuetype.get("statuses", []):
+                    statuses.add(status["name"])
+        # If no match on issue type, return all statuses across all types
+        if not statuses:
+            for issuetype in resp.json():
+                for status in issuetype.get("statuses", []):
+                    statuses.add(status["name"])
+        return sorted(statuses)
+
 
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 # Section 4: Cortex Client
@@ -1327,6 +1344,108 @@ def test_module() -> str:
     return "ok"
 
 
+def discover_resolutions() -> str:
+    """Discover Cortex resolve_reason values and cross-check against Jira workflow statuses."""
+    config = Config.from_params()
+
+    errors = config.validate()
+    if errors:
+        return f"Configuration errors:\n" + "\n".join(f"  - {e}" for e in errors)
+
+    cortex = CortexClient(config)
+    jira = JiraClient(config)
+
+    # Step 1: Fetch resolved cases from Cortex to discover valid resolve_reason values
+    demisto.info("Discovering resolution types from resolved Cortex cases...")
+    cases = cortex.search_cases(
+        filters=[{"field": "status_progress", "operator": "in", "value": ["Resolved"]}]
+    )
+
+    if not cases:
+        return "No resolved cases found in Cortex. Resolve at least one case manually first, then re-run."
+
+    # Extract unique resolve_reason values
+    cortex_reasons: set[str] = set()
+    for case in cases:
+        reason = case.get("resolve_reason", "")
+        if reason and reason != "Resolved - Auto Resolve":
+            cortex_reasons.add(reason)
+
+    if not cortex_reasons:
+        return "Found resolved cases but no resolve_reason values. Cases may have been auto-resolved."
+
+    # Step 2: Derive expected Jira status names (strip "Resolved - " prefix)
+    reason_to_status: dict[str, str] = {}
+    for reason in sorted(cortex_reasons):
+        if reason.startswith("Resolved - "):
+            status_name = reason[len("Resolved - "):]
+        else:
+            status_name = reason
+        reason_to_status[reason] = status_name
+
+    # Step 3: Fetch Jira workflow statuses
+    demisto.info("Fetching Jira workflow statuses...")
+    try:
+        jira_statuses = jira.get_project_statuses()
+    except Exception:
+        jira_statuses = []
+        demisto.error(f"Failed to fetch Jira statuses: {traceback.format_exc()}")
+
+    jira_status_lower = {s.lower(): s for s in jira_statuses}
+
+    # Step 4: Cross-check and build map
+    resolution_map: dict[str, str] = {}
+    matched: list[str] = []
+    missing: list[str] = []
+
+    for reason, expected_status in sorted(reason_to_status.items()):
+        # Check for exact or case-insensitive match
+        if expected_status.lower() in jira_status_lower:
+            actual_status = jira_status_lower[expected_status.lower()]
+            resolution_map[actual_status] = reason
+            matched.append(f"  ✓ {actual_status} → {reason}")
+        else:
+            missing.append(f"  ✗ {expected_status} — No matching Jira status. Create it in your Jira workflow.")
+
+    # Step 5: Save map to integration context
+    state = get_state()
+    state["discovered_resolution_map"] = resolution_map
+    save_state(state)
+
+    # Step 6: Build output
+    lines = [
+        f"## Resolution Type Discovery\n",
+        f"Found **{len(cortex_reasons)}** resolution types from **{len(cases)}** resolved Cortex cases.\n",
+    ]
+
+    if matched:
+        lines.append("### Matched (Jira status exists)\n")
+        lines.extend(matched)
+        lines.append("")
+
+    if missing:
+        lines.append("### Missing (create these Jira statuses)\n")
+        lines.extend(missing)
+        lines.append("")
+
+    if jira_statuses:
+        lines.append(f"### Current Jira Workflow Statuses ({config.jira_project_key} / {config.jira_issue_type})\n")
+        lines.append(", ".join(jira_statuses))
+        lines.append("")
+
+    if resolution_map:
+        map_json = json.dumps(resolution_map, indent=2)
+        lines.append("### Generated Resolution Map\n")
+        lines.append(f"```json\n{map_json}\n```\n")
+        lines.append("Copy this JSON into **Settings > Resolution Type Map** to use it.")
+        lines.append("")
+
+    if missing:
+        lines.append("**Action required:** Create the missing Jira statuses above, then re-run `!cortex-jira-discover-resolutions`.")
+
+    return "\n".join(lines)
+
+
 def main():
     command = demisto.command()
     demisto.info(f"Command: {command}")
@@ -1397,6 +1516,10 @@ def main():
             return_results(CommandResults(
                 readable_output="Integration state has been reset. Next sync will be a full initial sync.",
             ))
+
+        elif command == "cortex-jira-discover-resolutions":
+            result = discover_resolutions()
+            return_results(CommandResults(readable_output=result))
 
         else:
             raise NotImplementedError(f"Unknown command: {command}")
