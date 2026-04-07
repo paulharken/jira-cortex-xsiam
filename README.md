@@ -93,9 +93,13 @@ When a Jira ticket reaches Done, the script reads the Jira changelog to find the
 
 ```json
 {
-  "True Positive": "Resolved - True Positive",
   "False Positive": "Resolved - False Positive",
-  "Duplicate": "Resolved - Duplicate Case"
+  "Duplicate": "Resolved - Duplicate Case",
+  "Known Issue": "Resolved - Known Issue",
+  "Security Testing": "Resolved - Security Testing",
+  "TP Malicious": "Resolved - TP Malicious",
+  "TP Benign": "Resolved - TP Benign",
+  "SPAM": "Resolved - SPAM or Marketing"
 }
 ```
 

@@ -29,19 +29,19 @@ A single-file Python script that syncs Palo Alto Cortex XSIAM cases and standalo
 - `resolve_reason` and `status_progress: Resolved` must be sent TOGETHER
 - Severity in responses is **lowercase**: `"high"`, `"medium"`, etc.
 
-### Valid Cortex `resolve_reason` Values
+### Valid Cortex `resolve_reason` Values (tenant-specific)
 ```
 Resolved - False Positive
-Resolved - True Positive
 Resolved - Duplicate Case
 Resolved - Known Issue
 Resolved - Other
 Resolved - Security Testing
-Resolved - Dismissed
-Resolved - Fixed
-Resolved - Risk Accepted
+Resolved - TP Malicious
+Resolved - TP Benign
+Resolved - SPAM or Marketing
 ```
 `Resolved - Auto Resolve` is system-only -- returns 400 if sent via API.
+NOT on our tenant: `Resolved - True Positive` (replaced by TP Malicious / TP Benign), `Resolved - Dismissed`, `Resolved - Fixed`, `Resolved - Risk Accepted`.
 
 ### Cortex Issues API
 - Much more limited: only `in` and `gte`/`lte` operators -- no `nin`

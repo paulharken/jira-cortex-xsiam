@@ -85,7 +85,7 @@ class Config:
             jira_case_id_field=params.get("jira_case_id_field", ""),
             jira_issue_id_field=params.get("jira_issue_id_field", ""),
             jira_xdr_url_field=params.get("jira_xdr_url_field", ""),
-            resolution_type_map=params.get("resolution_type_map", "{}"),
+            resolution_type_map=params.get("resolution_type_map", '{"False Positive": "Resolved - False Positive", "Duplicate": "Resolved - Duplicate Case", "Known Issue": "Resolved - Known Issue", "Security Testing": "Resolved - Security Testing", "TP Malicious": "Resolved - TP Malicious", "TP Benign": "Resolved - TP Benign", "SPAM": "Resolved - SPAM or Marketing"}'),
             default_resolution_type=params.get("default_resolution_type", "Resolved - Other"),
             max_sync_cases=int(params.get("max_sync_cases", "0")),
             sync_issues=params.get("sync_issues", False),

@@ -120,7 +120,7 @@ configuration:
     name: resolution_type_map
     type: 12  # longText
     required: false
-    defaultvalue: '{"True Positive": "Resolved - True Positive", "False Positive": "Resolved - False Positive", "Duplicate": "Resolved - Duplicate Case"}'
+    defaultvalue: '{"False Positive": "Resolved - False Positive", "Duplicate": "Resolved - Duplicate Case", "Known Issue": "Resolved - Known Issue", "Security Testing": "Resolved - Security Testing", "TP Malicious": "Resolved - TP Malicious", "TP Benign": "Resolved - TP Benign", "SPAM": "Resolved - SPAM or Marketing"}'
     section: Collect
     additionalinfo: "JSON map: Jira pre-Done status name -> Cortex resolve_reason"
 
