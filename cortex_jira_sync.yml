@@ -133,6 +133,14 @@ configuration:
     additionalinfo: "Fallback Cortex resolve_reason when no map entry matches"
 
   # ── Sync Settings ──
+  - display: Sync Standalone Issues
+    name: sync_issues
+    type: 8  # boolean
+    required: false
+    defaultvalue: "true"
+    section: Collect
+    additionalinfo: "Sync assigned Cortex issues (not linked to cases) to Jira. Disable to only sync cases."
+
   - display: Max Cases Per Cycle
     name: max_sync_cases
     type: 0

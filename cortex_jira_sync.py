@@ -65,6 +65,7 @@ class Config:
     resolution_type_map: str
     default_resolution_type: str
     max_sync_cases: int
+    sync_issues: bool
 
     @classmethod
     def from_params(cls) -> "Config":
@@ -87,6 +88,7 @@ class Config:
             resolution_type_map=params.get("resolution_type_map", "{}"),
             default_resolution_type=params.get("default_resolution_type", "Resolved - Other"),
             max_sync_cases=int(params.get("max_sync_cases", "0")),
+            sync_issues=params.get("sync_issues", True),
         )
 
     def validate(self) -> list[str]:
@@ -1260,12 +1262,15 @@ def run_sync() -> str:
         demisto.error(f"Jira->Cortex sync failed: {traceback.format_exc()}")
         results["jira_to_cortex"] = {"error": traceback.format_exc()}
 
-    # Phase 4: Standalone issue sync
-    try:
-        results["issue_sync"] = sync_issues_to_jira(cortex, jira, state, config)
-    except Exception:
-        demisto.error(f"Issue sync failed: {traceback.format_exc()}")
-        results["issue_sync"] = {"error": traceback.format_exc()}
+    # Phase 4: Standalone issue sync (if enabled)
+    if config.sync_issues:
+        try:
+            results["issue_sync"] = sync_issues_to_jira(cortex, jira, state, config)
+        except Exception:
+            demisto.error(f"Issue sync failed: {traceback.format_exc()}")
+            results["issue_sync"] = {"error": traceback.format_exc()}
+    else:
+        results["issue_sync"] = {"skipped": True}
 
     # Housekeeping: prune old closed records
     pruned = prune_closed_records(state)
