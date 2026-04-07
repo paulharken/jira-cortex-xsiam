@@ -214,12 +214,4 @@ This is useful during initial setup to ensure your Jira workflow statuses align 
 - Closed records are automatically pruned after 7 days
 - If you need to force a cleanup, run `!cortex-jira-reset-state` (will re-sync everything)
 
----
 
-## Lineage
-
-Forked from [jira-cortex](../jira-cortex/) (Docker-based microservice with Flask dashboard, SQLite, cost engine). This version strips everything down to core sync logic for XSIAM-native deployment.
-
-**Removed:** Flask dashboard, SQLite, cost engine, Teams notifications, circuit breakers, watchdog, DB backup, setup wizard, analyst rate table.
-
-**Kept:** All sync logic, ADF ticket builder, bidirectional closure, severity sync, duplicate detection, resolution mapping, retry queue.
