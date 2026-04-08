@@ -1,0 +1,13 @@
+# Local test harness
+demistomock.py
+CommonServerPython.py
+run_local.py
+local_state.json
+
+# Python
+__pycache__/
+*.pyc
+
+# IDE
+.idea/
+.vscode/

@@ -84,6 +84,7 @@ All config is set via XSIAM integration parameters (no `.env` file):
 | `jira_xdr_url_field` | No | Custom field ID for XDR URL |
 | `resolution_type_map` | No | JSON: Jira status -> Cortex resolve_reason |
 | `default_resolution_type` | No | Fallback resolve reason (default: `Resolved - Other`) |
+| `sync_from_date` | No | Only sync cases/issues updated on or after this date (ISO format, e.g. `2026-01-01`). Leave empty to sync all. |
 | `sync_issues` | No | Sync standalone issues to Jira (default: `false`). Enable to sync issues in addition to cases. |
 | `max_sync_cases` | No | Max tickets per cycle (default: `0` = unlimited) |
 
@@ -207,6 +208,7 @@ This is useful during initial setup to ensure your Jira workflow statuses align 
 - If duplicates already exist, close the extras in Jira and run `!cortex-jira-reset-state` to re-sync
 
 **First run creates too many tickets**
+- Set `sync_from_date` to limit the initial sync to recent cases (e.g. `2026-01-01` to skip anything older than that)
 - Set `max_sync_cases` to a small number (e.g. 10) for initial testing
 - Once confirmed working, set to 0 (unlimited) or remove the limit
 

@@ -141,6 +141,14 @@ configuration:
     section: Collect
     additionalinfo: "Sync assigned Cortex issues (not linked to cases) to Jira. Enable to sync issues in addition to cases."
 
+  - display: Sync From Date
+    name: sync_from_date
+    type: 0
+    required: false
+    defaultvalue: ""
+    section: Collect
+    additionalinfo: "Only sync cases/issues updated on or after this date (ISO format, e.g. 2026-01-01). Leave empty to sync all."
+
   - display: Max Cases Per Cycle
     name: max_sync_cases
     type: 0

@@ -66,6 +66,7 @@ class Config:
     default_resolution_type: str
     max_sync_cases: int
     sync_issues: bool
+    sync_from_date: str
 
     @classmethod
     def from_params(cls) -> "Config":
@@ -89,6 +90,7 @@ class Config:
             default_resolution_type=params.get("default_resolution_type", "Resolved - Other"),
             max_sync_cases=int(params.get("max_sync_cases", "0")),
             sync_issues=params.get("sync_issues", False),
+            sync_from_date=params.get("sync_from_date", ""),
         )
 
     def validate(self) -> list[str]:
@@ -292,7 +294,13 @@ class JiraClient:
         return transitions
 
     def find_ticket_by_field(self, field_id: str, value: str) -> Optional[str]:
-        jql = f'project = "{self.project_key}" AND "{field_id}" = "{value}"'
+        # JQL requires cf[NNNNN] syntax for custom fields, not "customfield_NNNNN"
+        if field_id.startswith("customfield_"):
+            cf_num = field_id.replace("customfield_", "")
+            jql_field = f"cf[{cf_num}]"
+        else:
+            jql_field = f'"{field_id}"'
+        jql = f'project = "{self.project_key}" AND {jql_field} = "{value}"'
         url = f"{self.base_url}/rest/api/3/search/jql"
         body = {"jql": jql, "fields": ["key"], "maxResults": 1}
         resp = self._request("POST", url, json=body)
@@ -737,6 +745,10 @@ def sync_cortex_to_jira(
         filters = [
             {"field": "status_progress", "operator": "nin", "value": ["Resolved"]},
         ]
+        if config.sync_from_date:
+            from_ms = int(datetime.fromisoformat(config.sync_from_date).timestamp() * 1000)
+            filters.append({"field": "last_update_time", "operator": "gte", "value": from_ms})
+            demisto.info(f"Cortex->Jira: applying sync_from_date floor {config.sync_from_date}")
     else:
         since_ms = last_poll_ms - 60000  # 60s lookback buffer
         filters = [
@@ -803,7 +815,7 @@ def _handle_case(
         closed_jira_key = existing["jira_key"]
 
     # Build ticket fields
-    summary = f"[CORTEX-{case_id}] {description}"
+    summary = f"[CORTEX-{case_id}] {description.replace(chr(10), ' ').replace(chr(13), ' ').strip()}"
     description_adf = build_case_description_adf(case, config)
     extra_fields: dict = {}
     if config.jira_case_id_field:
@@ -1075,6 +1087,9 @@ def sync_issues_to_jira(
     filters = [
         {"field": "issue_domain", "operator": "in", "value": [domain.capitalize()]},
     ]
+    if config.sync_from_date:
+        from_ms = int(datetime.fromisoformat(config.sync_from_date).timestamp() * 1000)
+        filters.append({"field": "observation_time", "operator": "gte", "value": from_ms})
 
     demisto.info(f"Issue sync: searching {domain} domain issues")
     all_issues = cortex.search_issues_filtered(filters=filters)
