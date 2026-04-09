@@ -6,7 +6,7 @@ A single-file Python script that syncs Palo Alto Cortex XSIAM security cases and
 
 - **Cortex Cases -> Jira:** Creates Jira tickets for new Cortex cases with full ADF descriptions, severity-based priority, and XDR deep links
 - **Jira -> Cortex:** Resolves Cortex cases when Jira tickets are closed (with configurable resolution type mapping)
-- **Standalone Issues -> Jira:** Syncs assigned Cortex issues (not linked to cases) to Jira, auto-assigns to the same analyst
+- **Standalone Issues -> Jira:** Syncs assigned standalone Cortex issues to Jira (see below)
 - **Bidirectional Closure:** Detects closure from either side and syncs state
 - **Severity Sync:** Updates Jira priority when Cortex case severity changes
 - **Duplicate Detection:** JQL check before ticket creation to prevent duplicates
@@ -61,6 +61,19 @@ cortex_jira_sync.yml    # XSIAM integration definition (params, commands, cron)
 7. Prune closed records older than 7 days
 8. Save state
 ```
+
+## Standalone Issue Sync
+
+When `sync_issues` is enabled, the script syncs standalone Cortex issues to Jira. Not all issues are synced — only those that meet all of the following criteria:
+
+1. **Not linked to a case** — issues that are already part of a Cortex case are handled by the case sync and won't be duplicated as standalone tickets
+2. **Assigned to an analyst** — only issues where someone has picked up the work (`assigned_to` is populated). Unassigned issues are ignored.
+3. **Not resolved** — resolved issues are skipped
+4. **Not already synced** — issues that already have a Jira ticket won't be created again
+
+When a qualifying issue is synced, the script also auto-assigns the Jira ticket to the same analyst (matched by email via the Jira user search API, with results cached in state).
+
+This is off by default. Enable it with the `sync_issues` parameter.
 
 ## Configuration
 
