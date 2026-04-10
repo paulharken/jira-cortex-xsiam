@@ -429,6 +429,38 @@ class CortexClient:
         # 204 No Content on success — do NOT call .json()
         demisto.info(f"Cortex case {case_id} updated: status={status} reason={reason}")
 
+    def get_playbook_state(self, issue_id) -> Optional[str]:
+        """Get playbook execution state for an issue/investigation.
+
+        Returns the playbook state string (e.g. 'completed', 'inprogress', 'error')
+        or None if the playbook data couldn't be retrieved.
+        """
+        url = f"{self.base_url}/xsoar/inv-playbook/{issue_id}"
+        try:
+            resp = self._request("GET", url)
+            if not resp.ok:
+                demisto.debug(f"Playbook check for issue {issue_id}: HTTP {resp.status_code}")
+                return None
+            return resp.json().get("state")
+        except Exception:
+            demisto.debug(f"Playbook check failed for issue {issue_id}: {traceback.format_exc()}")
+            return None
+
+    def case_playbooks_ready(self, issue_ids: list) -> bool:
+        """Check if all playbooks for a case's issues have completed.
+
+        Returns True if every issue's playbook state is 'completed',
+        False if any are still running or couldn't be checked.
+        """
+        if not issue_ids:
+            return True
+        for issue_id in issue_ids:
+            state = self.get_playbook_state(issue_id)
+            if state != "completed":
+                demisto.debug(f"Issue {issue_id} playbook not ready: state={state}")
+                return False
+        return True
+
     def search_issues_filtered(self, filters: Optional[list[dict]] = None) -> list[dict]:
         all_issues: list[dict] = []
         search_from = 0
@@ -730,7 +762,7 @@ def sync_cortex_to_jira(
     cortex: CortexClient, jira: JiraClient, state: dict, config: Config,
 ) -> dict:
     """Fetch new/changed Cortex cases and create Jira tickets. Returns stats."""
-    stats = {"created": 0, "existing": 0, "failed": 0, "retried": 0}
+    stats = {"created": 0, "existing": 0, "failed": 0, "retried": 0, "pending_playbook": 0}
 
     # Process retry queue first
     stats["retried"] = _process_retry_queue(cortex, jira, state, config)
@@ -773,6 +805,13 @@ def sync_cortex_to_jira(
         if max_cases > 0 and stats["created"] >= max_cases:
             break
 
+        # Skip cases whose playbooks haven't finished yet
+        issue_ids = [str(i) for i in case.get("issue_ids", case.get("issues", []))]
+        if not cortex.case_playbooks_ready(issue_ids):
+            demisto.info(f"Case {case_id}: playbooks not yet completed — deferring to next cycle")
+            stats["pending_playbook"] += 1
+            continue
+
         result = _handle_case(case, cortex, jira, state, config)
         if result == "created":
             stats["created"] += 1
@@ -788,7 +827,8 @@ def sync_cortex_to_jira(
 
     demisto.info(
         f"Cortex->Jira: {stats['created']} created, {stats['existing']} existing, "
-        f"{stats['failed']} failed, {stats['retried']} retried"
+        f"{stats['failed']} failed, {stats['retried']} retried, "
+        f"{stats['pending_playbook']} awaiting playbooks"
     )
     return stats
 
@@ -1126,6 +1166,12 @@ def sync_issues_to_jira(
         status = issue.get("status", {})
         status_progress = status.get("progress", "") if isinstance(status, dict) else str(status)
         if status_progress.upper() == "RESOLVED":
+            continue
+
+        # Skip if playbook hasn't completed yet
+        pb_state = cortex.get_playbook_state(issue_id)
+        if pb_state != "completed":
+            demisto.info(f"Issue {issue_id}: playbook not yet completed (state={pb_state}) — deferring")
             continue
 
         # Build Jira ticket
