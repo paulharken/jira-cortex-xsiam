@@ -23,6 +23,8 @@ cortex_jira_sync.yml    # XSIAM integration definition (params, commands, cron)
 
 **No external dependencies** beyond `requests` (pre-installed in XSIAM runtime).
 
+**No Cortex API key required.** When running inside XSIAM, the integration uses native `demisto.executeCommand('core-api-post')` calls to communicate with the Cortex API — no API key generation or management needed. The Cortex API key fields in the integration config are only used for local development/testing via `run_local.py`.
+
 ## State Schema
 
 ```json
@@ -82,9 +84,9 @@ All config is set via XSIAM integration parameters (no `.env` file):
 
 | Parameter | Required | Description |
 |-----------|----------|-------------|
-| `cortex_base_url` | Yes | Cortex API endpoint |
-| `cortex_api_key` | Yes | API authentication key |
-| `cortex_api_key_id` | Yes | API key ID |
+| `cortex_base_url` | No | Cortex API endpoint (only for local testing) |
+| `cortex_api_key` | No | API authentication key (only for local testing) |
+| `cortex_api_key_id` | No | API key ID (only for local testing) |
 | `cortex_console_url` | No | Console URL for XDR deep links in Jira tickets |
 | `cortex_case_domain` | No | Case domain filter (default: `security`) |
 | `jira_site_url` | Yes | Jira site URL (e.g. `https://site.atlassian.net`) |
@@ -124,8 +126,7 @@ Unmapped statuses fall back to `default_resolution_type`.
 
 ### Prerequisites
 
-1. **Cortex XSIAM API key** — Settings > Configurations > API Keys. Create a key with at minimum Cases read/write and Issues read permissions.
-2. **Jira API token** — Generate at [id.atlassian.com/manage-profile/security/api-tokens](https://id.atlassian.com/manage-profile/security/api-tokens). The Jira account needs project admin on the target project.
+1. **Jira API token** — Generate at [id.atlassian.com/manage-profile/security/api-tokens](https://id.atlassian.com/manage-profile/security/api-tokens). The Jira account needs project admin on the target project.
 3. **Jira custom fields** (recommended) — Create three short-text custom fields in your Jira project:
    - Cortex Case ID
    - Cortex Issue ID
@@ -155,10 +156,7 @@ Unmapped statuses fall back to `default_resolution_type`.
 1. Go to **Settings > Integrations > Instances**
 2. Search for `Cortex Jira Sync`
 3. Click **Add Instance**
-4. Fill in all required parameters:
-   - **Cortex API Base URL** — e.g. `https://api-yourname.xdr.us.paloaltonetworks.com`
-   - **Cortex API Key** — the key value
-   - **Cortex API Key ID** — the numeric ID
+4. Fill in the required Jira parameters (no Cortex API key needed — the integration uses native XSIAM API calls):
    - **Jira Site URL** — e.g. `https://yoursite.atlassian.net`
    - **Jira Email** — the API account email
    - **Jira API Token** — from step 1
@@ -205,9 +203,8 @@ This is useful during initial setup to ensure your Jira workflow statuses align 
 ### Troubleshooting
 
 **Test fails with "Cortex connection failed"**
-- Verify the API key hasn't expired
-- Check the base URL ends with the domain, no trailing path (e.g. no `/public_api/v1`)
-- Ensure the XSIAM instance has outbound HTTPS access (if using external API calls)
+- The integration uses native XSIAM API calls — no API key is needed
+- If running locally with `run_local.py`, check the API key and base URL in your `.env` file
 
 **Test fails with "Jira connection failed"**
 - Verify the email + token pair is correct
