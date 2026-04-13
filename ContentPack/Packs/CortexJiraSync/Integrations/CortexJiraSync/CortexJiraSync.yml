@@ -13,27 +13,27 @@ defaultmapperin: ""
 defaultclassifier: ""
 
 configuration:
-  # ── Cortex XSIAM ──
+  # ── Cortex XSIAM (optional — only needed for local testing) ──
   - display: Cortex API Base URL
     name: cortex_base_url
     type: 0  # text
-    required: true
+    required: false
     section: Connect
-    additionalinfo: "API endpoint (e.g. https://api-yourname.xdr.us.paloaltonetworks.com)"
+    additionalinfo: "Not required when running in XSIAM (uses native API). Only for local testing."
 
   - display: Cortex API Key
     name: cortex_api_key
     type: 4  # encrypted
-    required: true
+    required: false
     section: Connect
-    additionalinfo: "Authentication key from Cortex Settings > API Keys"
+    additionalinfo: "Not required when running in XSIAM (uses native API). Only for local testing."
 
   - display: Cortex API Key ID
     name: cortex_api_key_id
     type: 0  # text
-    required: true
+    required: false
     section: Connect
-    additionalinfo: "Numeric ID associated with the API key"
+    additionalinfo: "Not required when running in XSIAM (uses native API). Only for local testing."
 
   - display: Cortex Console URL
     name: cortex_console_url
