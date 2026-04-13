@@ -14,6 +14,27 @@ defaultclassifier: ""
 
 configuration:
   # ── Cortex XSIAM ──
+  - display: Cortex API Base URL
+    name: cortex_base_url
+    type: 0  # text
+    required: true
+    section: Connect
+    additionalinfo: "API endpoint (e.g. https://api-yourname.xdr.us.paloaltonetworks.com)"
+
+  - display: Cortex API Key
+    name: cortex_api_key
+    type: 4  # encrypted
+    required: true
+    section: Connect
+    additionalinfo: "Authentication key from Cortex Settings > API Keys"
+
+  - display: Cortex API Key ID
+    name: cortex_api_key_id
+    type: 0  # text
+    required: true
+    section: Connect
+    additionalinfo: "Numeric ID associated with the API key"
+
   - display: Cortex Console URL
     name: cortex_console_url
     type: 0

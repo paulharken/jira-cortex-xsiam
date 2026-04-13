@@ -95,16 +95,10 @@ class Config:
 
     def validate(self) -> list[str]:
         errors = []
-        # Cortex API creds only required when running locally (not in XSIAM)
-        if not _is_xsiam_runtime():
-            for name, value in {
-                "cortex_base_url": self.cortex_base_url,
-                "cortex_api_key": self.cortex_api_key,
-                "cortex_api_key_id": self.cortex_api_key_id,
-            }.items():
-                if not value or not value.strip():
-                    errors.append(f"Missing required parameter: {name}")
         required = {
+            "cortex_base_url": self.cortex_base_url,
+            "cortex_api_key": self.cortex_api_key,
+            "cortex_api_key_id": self.cortex_api_key_id,
             "jira_email": self.jira_email,
             "jira_api_token": self.jira_api_token,
             "jira_project_key": self.jira_project_key,
@@ -367,56 +361,19 @@ class JiraClient:
 # Section 4: Cortex Client
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-
-def _is_xsiam_runtime() -> bool:
-    """Detect if we're running inside XSIAM (vs local via run_local.py)."""
-    try:
-        # demisto.callingContext exists in real XSIAM runtime, not in mock
-        ctx = demisto.callingContext
-        return ctx is not None
-    except (AttributeError, Exception):
-        return False
-
-
 class CortexClient:
     def __init__(self, config: Config):
-        self.use_native = _is_xsiam_runtime()
-        # Public API fallback for local testing only
-        if not self.use_native:
-            self.base_url = config.cortex_base_url
-            self.session = requests.Session()
-            self.session.headers.update({
-                "Authorization": config.cortex_api_key,
-                "x-xdr-auth-id": config.cortex_api_key_id,
-                "Content-Type": "application/json",
-                "Accept": "application/json",
-            })
-        demisto.info(f"CortexClient mode: {'native (internalHttpRequest)' if self.use_native else 'public API'}")
+        self.base_url = config.cortex_base_url
+        self.session = requests.Session()
+        self.session.headers.update({
+            "Authorization": config.cortex_api_key,
+            "x-xdr-auth-id": config.cortex_api_key_id,
+            "Content-Type": "application/json",
+            "Accept": "application/json",
+        })
 
-    def _native_post(self, uri: str, body: dict) -> dict:
-        """Call Cortex API via demisto.internalHttpRequest (available in integrations from server 6.1+)."""
-        resp = demisto.internalHttpRequest("POST", uri, json.dumps(body))
-        status_code = resp.get("statusCode", 0)
-        if status_code >= 400:
-            raise RuntimeError(f"internalHttpRequest POST {uri} returned {status_code}: {resp.get('body', '')}")
-        resp_body = resp.get("body", "")
-        if not resp_body:
-            return {}
-        return json.loads(resp_body)
-
-    def _native_get(self, uri: str) -> dict:
-        """Call Cortex API via demisto.internalHttpRequest (available in integrations from server 6.1+)."""
-        resp = demisto.internalHttpRequest("GET", uri)
-        status_code = resp.get("statusCode", 0)
-        if status_code >= 400:
-            raise RuntimeError(f"internalHttpRequest GET {uri} returned {status_code}: {resp.get('body', '')}")
-        resp_body = resp.get("body", "")
-        if not resp_body:
-            return {}
-        return json.loads(resp_body)
-
-    def _fallback_request(self, method: str, url: str, **kwargs) -> requests.Response:
-        """HTTP request with retry on 429/503. Used for local testing only."""
+    def _request(self, method: str, url: str, **kwargs) -> requests.Response:
+        """HTTP request with retry on 429/503."""
         delay = 1.0
         for attempt in range(4):
             resp = self.session.request(method, url, timeout=30, **kwargs)
@@ -430,6 +387,7 @@ class CortexClient:
     def search_cases(self, filters: Optional[list[dict]] = None) -> list[dict]:
         all_cases: list[dict] = []
         search_from = 0
+        url = f"{self.base_url}/public_api/v1/case/search"
 
         while True:
             body = {
@@ -440,14 +398,9 @@ class CortexClient:
                     "sort": {"field": "creation_time", "keyword": "asc"},
                 }
             }
-
-            if self.use_native:
-                data = self._native_post("/public_api/v1/case/search", body)
-            else:
-                resp = self._fallback_request("POST", f"{self.base_url}/public_api/v1/case/search", json=body)
-                resp.raise_for_status()
-                data = resp.json()
-
+            resp = self._request("POST", url, json=body)
+            resp.raise_for_status()
+            data = resp.json()
             cases = data.get("reply", {}).get("DATA", [])
             all_cases.extend(cases)
             total = data.get("reply", {}).get("TOTAL_COUNT", 0)
@@ -470,12 +423,9 @@ class CortexClient:
                 }
             }
         }
-
-        if self.use_native:
-            self._native_post(f"/public_api/v1/case/update/{case_id}", body)
-        else:
-            resp = self._fallback_request("POST", f"{self.base_url}/public_api/v1/case/update/{case_id}", json=body)
-            resp.raise_for_status()
+        url = f"{self.base_url}/public_api/v1/case/update/{case_id}"
+        resp = self._request("POST", url, json=body)
+        resp.raise_for_status()
         # 204 No Content on success — do NOT call .json()
         demisto.info(f"Cortex case {case_id} updated: status={status} reason={reason}")
 
@@ -485,16 +435,13 @@ class CortexClient:
         Returns the playbook state string (e.g. 'completed', 'inprogress', 'error')
         or None if the playbook data couldn't be retrieved.
         """
+        url = f"{self.base_url}/xsoar/inv-playbook/{issue_id}"
         try:
-            if self.use_native:
-                data = self._native_get(f"/xsoar/inv-playbook/{issue_id}")
-                return data.get("state")
-            else:
-                resp = self._fallback_request("GET", f"{self.base_url}/xsoar/inv-playbook/{issue_id}")
-                if not resp.ok:
-                    demisto.debug(f"Playbook check for issue {issue_id}: HTTP {resp.status_code}")
-                    return None
-                return resp.json().get("state")
+            resp = self._request("GET", url)
+            if not resp.ok:
+                demisto.debug(f"Playbook check for issue {issue_id}: HTTP {resp.status_code}")
+                return None
+            return resp.json().get("state")
         except Exception:
             demisto.debug(f"Playbook check failed for issue {issue_id}: {traceback.format_exc()}")
             return None
@@ -517,6 +464,7 @@ class CortexClient:
     def search_issues_filtered(self, filters: Optional[list[dict]] = None) -> list[dict]:
         all_issues: list[dict] = []
         search_from = 0
+        url = f"{self.base_url}/public_api/v1/issue/search"
 
         while True:
             body = {
@@ -526,14 +474,9 @@ class CortexClient:
                     "search_to": search_from + PAGE_SIZE,
                 }
             }
-
-            if self.use_native:
-                data = self._native_post("/public_api/v1/issue/search", body)
-            else:
-                resp = self._fallback_request("POST", f"{self.base_url}/public_api/v1/issue/search", json=body)
-                resp.raise_for_status()
-                data = resp.json()
-
+            resp = self._request("POST", url, json=body)
+            resp.raise_for_status()
+            data = resp.json()
             issues = data.get("reply", {}).get("DATA", [])
             all_issues.extend(issues)
             total = data.get("reply", {}).get("TOTAL_COUNT", 0)
