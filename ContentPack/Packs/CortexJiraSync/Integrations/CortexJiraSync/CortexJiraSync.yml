@@ -1,0 +1,197 @@
+commonfields:
+  id: CortexJiraSync
+  version: -1
+name: Cortex Jira Sync
+display: Cortex XSIAM to Jira Cloud Sync
+category: Utilities
+description: >-
+  Syncs Cortex XSIAM security cases and standalone issues to Atlassian Jira Cloud.
+  Creates Jira tickets, syncs severity changes, and handles bidirectional closure.
+  Designed to run as a cron job every 60 seconds.
+defaultmapperin: ""
+defaultclassifier: ""
+
+configuration:
+  # ── Cortex XSIAM ──
+  - display: Cortex API Base URL
+    name: cortex_base_url
+    type: 0  # text
+    required: true
+    section: Connect
+    additionalinfo: "API endpoint (e.g. https://api-yourname.xdr.us.paloaltonetworks.com)"
+
+  - display: Cortex API Key
+    name: cortex_api_key
+    type: 4  # encrypted
+    required: true
+    section: Connect
+    additionalinfo: "Authentication key from Cortex Settings > API Keys"
+
+  - display: Cortex API Key ID
+    name: cortex_api_key_id
+    type: 0  # text
+    required: true
+    section: Connect
+    additionalinfo: "Numeric ID associated with the API key"
+
+  - display: Cortex Console URL
+    name: cortex_console_url
+    type: 0
+    required: false
+    section: Connect
+    additionalinfo: "Browser URL for deep links in Jira tickets (e.g. https://yourname.xdr.us.paloaltonetworks.com)"
+
+  - display: Case Domain
+    name: cortex_case_domain
+    type: 0
+    required: false
+    defaultvalue: "security"
+    section: Connect
+    additionalinfo: "Only sync cases from this domain"
+
+  # ── Jira Cloud ──
+  - display: Jira Site URL
+    name: jira_site_url
+    type: 0
+    required: true
+    section: Connect
+    additionalinfo: "e.g. https://yoursite.atlassian.net"
+
+  - display: Jira Cloud ID
+    name: jira_cloud_id
+    type: 0
+    required: false
+    section: Connect
+    additionalinfo: "Cloud instance ID (find at yoursite.atlassian.net/_edge/tenant_info). Leave empty to use Site URL directly."
+
+  - display: Jira Email
+    name: jira_email
+    type: 0
+    required: true
+    section: Connect
+    additionalinfo: "Email of the Jira account used for API access"
+
+  - display: Jira API Token
+    name: jira_api_token
+    type: 4  # encrypted
+    required: true
+    section: Connect
+    additionalinfo: "API token from id.atlassian.com/manage-profile/security/api-tokens"
+
+  - display: Jira Project Key
+    name: jira_project_key
+    type: 0
+    required: true
+    section: Connect
+    additionalinfo: "Project key where tickets are created (e.g. SEC)"
+
+  - display: Jira Issue Type
+    name: jira_issue_type
+    type: 0
+    required: false
+    defaultvalue: "Alert"
+    section: Connect
+    additionalinfo: "Issue type to create in Jira"
+
+  # ── Custom Fields ──
+  - display: Jira Case ID Field
+    name: jira_case_id_field
+    type: 0
+    required: false
+    section: Collect
+    additionalinfo: "Custom field ID for Cortex Case ID (e.g. customfield_10062). Enables duplicate detection."
+
+  - display: Jira Issue ID Field
+    name: jira_issue_id_field
+    type: 0
+    required: false
+    section: Collect
+    additionalinfo: "Custom field ID for Cortex Issue ID (e.g. customfield_10063)"
+
+  - display: Jira XDR URL Field
+    name: jira_xdr_url_field
+    type: 0
+    required: false
+    section: Collect
+    additionalinfo: "Custom field ID for XDR URL deep link (e.g. customfield_10064)"
+
+  # ── Closure Resolution ──
+  - display: Resolution Type Map
+    name: resolution_type_map
+    type: 12  # longText
+    required: false
+    defaultvalue: '{"False Positive": "Resolved - False Positive", "Duplicate": "Resolved - Duplicate Case", "Known Issue": "Resolved - Known Issue", "Security Testing": "Resolved - Security Testing", "TP Malicious": "Resolved - TP Malicious", "TP Benign": "Resolved - TP Benign", "SPAM": "Resolved - SPAM or Marketing"}'
+    section: Collect
+    additionalinfo: "JSON map: Jira pre-Done status name -> Cortex resolve_reason"
+
+  - display: Default Resolution Type
+    name: default_resolution_type
+    type: 0
+    required: false
+    defaultvalue: "Resolved - Other"
+    section: Collect
+    additionalinfo: "Fallback Cortex resolve_reason when no map entry matches"
+
+  # ── Sync Settings ──
+  - display: Sync Standalone Issues
+    name: sync_issues
+    type: 8  # boolean
+    required: false
+    defaultvalue: "false"
+    section: Collect
+    additionalinfo: "Sync assigned Cortex issues (not linked to cases) to Jira. Enable to sync issues in addition to cases."
+
+  - display: Sync From Date
+    name: sync_from_date
+    type: 0
+    required: false
+    defaultvalue: ""
+    section: Collect
+    additionalinfo: "Only sync cases/issues updated on or after this date (ISO format, e.g. 2026-01-01). Leave empty to sync all."
+
+  - display: Max Cases Per Cycle
+    name: max_sync_cases
+    type: 0
+    required: false
+    defaultvalue: "0"
+    section: Collect
+    additionalinfo: "Limit new tickets created per cycle (0 = unlimited)"
+
+  # ── Fetching ──
+  - display: Fetch incidents
+    name: isFetch
+    type: 8  # boolean
+    required: false
+    defaultvalue: "true"
+    section: Collect
+
+  - display: Incidents Fetch Interval
+    name: incidentFetchInterval
+    type: 19  # fetch interval
+    required: false
+    defaultvalue: "1"
+    section: Collect
+
+script:
+  type: python
+  subtype: python3
+  dockerimage: demisto/python3:3.11.9.107902
+  isfetch: true
+  runonce: false
+
+  commands:
+    - name: cortex-jira-sync
+      description: "Manually trigger a full sync cycle (cases + issues, both directions)."
+      arguments: []
+
+    - name: cortex-jira-status
+      description: "Show current sync state: open/closed counts, retry queue, last poll times."
+      arguments: []
+
+    - name: cortex-jira-reset-state
+      description: "Reset all integration state. Next sync will be a full initial sync. Use with caution."
+      arguments: []
+
+    - name: cortex-jira-discover-resolutions
+      description: "Discover Cortex resolve_reason values from resolved cases and cross-check against Jira workflow statuses. Outputs a ready-to-use resolution_type_map."
+      arguments: []
