@@ -391,34 +391,29 @@ class CortexClient:
                 "Content-Type": "application/json",
                 "Accept": "application/json",
             })
-        demisto.info(f"CortexClient mode: {'native (demisto.executeCommand)' if self.use_native else 'public API'}")
+        demisto.info(f"CortexClient mode: {'native (internalHttpRequest)' if self.use_native else 'public API'}")
 
     def _native_post(self, uri: str, body: dict) -> dict:
-        """Call Cortex API via demisto.executeCommand('core-api-post')."""
-        result = demisto.executeCommand("core-api-post", {
-            "uri": uri,
-            "body": json.dumps(body),
-        })
-        if not result or isError(result[0]):
-            err_msg = result[0]["Contents"] if result else "Empty response from core-api-post"
-            raise RuntimeError(f"core-api-post {uri} failed: {err_msg}")
-        contents = result[0].get("Contents", {})
-        if isinstance(contents, str):
-            contents = json.loads(contents)
-        return contents
+        """Call Cortex API via demisto.internalHttpRequest (available in integrations from server 6.1+)."""
+        resp = demisto.internalHttpRequest("POST", uri, json.dumps(body))
+        status_code = resp.get("statusCode", 0)
+        if status_code >= 400:
+            raise RuntimeError(f"internalHttpRequest POST {uri} returned {status_code}: {resp.get('body', '')}")
+        resp_body = resp.get("body", "")
+        if not resp_body:
+            return {}
+        return json.loads(resp_body)
 
     def _native_get(self, uri: str) -> dict:
-        """Call Cortex API via demisto.executeCommand('core-api-get')."""
-        result = demisto.executeCommand("core-api-get", {
-            "uri": uri,
-        })
-        if not result or isError(result[0]):
-            err_msg = result[0]["Contents"] if result else "Empty response from core-api-get"
-            raise RuntimeError(f"core-api-get {uri} failed: {err_msg}")
-        contents = result[0].get("Contents", {})
-        if isinstance(contents, str):
-            contents = json.loads(contents)
-        return contents
+        """Call Cortex API via demisto.internalHttpRequest (available in integrations from server 6.1+)."""
+        resp = demisto.internalHttpRequest("GET", uri)
+        status_code = resp.get("statusCode", 0)
+        if status_code >= 400:
+            raise RuntimeError(f"internalHttpRequest GET {uri} returned {status_code}: {resp.get('body', '')}")
+        resp_body = resp.get("body", "")
+        if not resp_body:
+            return {}
+        return json.loads(resp_body)
 
     def _fallback_request(self, method: str, url: str, **kwargs) -> requests.Response:
         """HTTP request with retry on 429/503. Used for local testing only."""

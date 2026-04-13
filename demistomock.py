@@ -128,8 +128,13 @@ def incidents(inc_list: list):
 
 
 def executeCommand(cmd: str, args: dict):
-    """Mock — not implemented locally. CortexClient detects local mode and uses public API instead."""
+    """Mock — not available in local mode. CortexClient uses public API fallback instead."""
     raise NotImplementedError(f"executeCommand('{cmd}') is not available in local mode")
+
+
+def internalHttpRequest(method: str, uri: str, body: str = None):
+    """Mock — not available in local mode. CortexClient uses public API fallback instead."""
+    raise NotImplementedError(f"internalHttpRequest('{method}', '{uri}') is not available in local mode")
 
 
 # callingContext is absent in the mock — CortexClient checks for this to detect XSIAM runtime
