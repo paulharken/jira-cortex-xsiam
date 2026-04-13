@@ -73,14 +73,14 @@ class Config:
         params = demisto.params()
         return cls(
             cortex_base_url=params.get("cortex_base_url", "").rstrip("/"),
-            cortex_api_key=params.get("cortex_api_key", ""),
+            cortex_api_key=params.get("cortex_api_key", {}).get("password", "") if isinstance(params.get("cortex_api_key"), dict) else params.get("cortex_api_key", ""),
             cortex_api_key_id=str(params.get("cortex_api_key_id", "")),
             cortex_console_url=params.get("cortex_console_url", "").rstrip("/"),
             cortex_case_domain=params.get("cortex_case_domain", "security"),
             jira_site_url=params.get("jira_site_url", "").rstrip("/"),
             jira_cloud_id=params.get("jira_cloud_id", ""),
             jira_email=params.get("jira_email", ""),
-            jira_api_token=params.get("jira_api_token", ""),
+            jira_api_token=params.get("jira_api_token", {}).get("password", "") if isinstance(params.get("jira_api_token"), dict) else params.get("jira_api_token", ""),
             jira_project_key=params.get("jira_project_key", ""),
             jira_issue_type=params.get("jira_issue_type", "Alert"),
             jira_case_id_field=params.get("jira_case_id_field", ""),

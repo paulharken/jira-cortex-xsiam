@@ -1,8 +1,9 @@
 commonfields:
   id: CortexJiraSync
   version: -1
-name: Cortex Jira Sync
-display: Cortex XSIAM to Jira Cloud Sync
+fromversion: 5.0.0
+name: CortexJiraSync
+display: Cortex JIRA Sync
 category: Utilities
 description: >-
   Syncs Cortex XSIAM security cases and standalone issues to Atlassian Jira Cloud.

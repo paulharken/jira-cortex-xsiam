@@ -2,6 +2,7 @@ category: Utilities
 commonfields:
   id: CortexJiraSync
   version: -1
+fromversion: 5.0.0
 configuration:
 - additionalinfo: API endpoint (e.g. https://api-yourname.xdr.us.paloaltonetworks.com)
   display: Cortex API Base URL
@@ -139,8 +140,8 @@ configuration:
 defaultclassifier: ''
 defaultmapperin: ''
 description: Syncs Cortex XSIAM security cases and standalone issues to Atlassian Jira Cloud. Creates Jira tickets, syncs severity changes, and handles bidirectional closure. Designed to run as a cron job every 60 seconds.
-display: Cortex XSIAM to Jira Cloud Sync
-name: Cortex Jira Sync
+display: Cortex JIRA Sync
+name: CortexJiraSync
 script:
   commands:
   - arguments: []

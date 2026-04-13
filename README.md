@@ -10,6 +10,7 @@ A single-file Python script that syncs Palo Alto Cortex XSIAM security cases and
 - **Bidirectional Closure:** Detects closure from either side and syncs state
 - **Severity Sync:** Updates Jira priority when Cortex case severity changes
 - **Duplicate Detection:** JQL check before ticket creation to prevent duplicates
+- **Playbook Readiness Check:** Defers Jira ticket creation until all playbooks for a case's issues have completed, preventing sync of incomplete data
 
 ## Architecture
 
