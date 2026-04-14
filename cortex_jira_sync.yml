@@ -38,9 +38,9 @@ configuration:
   - display: Cortex Console URL
     name: cortex_console_url
     type: 0
-    required: false
+    required: true
     section: Connect
-    additionalinfo: "Browser URL for deep links in Jira tickets (e.g. https://yourname.xdr.us.paloaltonetworks.com)"
+    additionalinfo: "Browser URL for deep links in Jira tickets (e.g. https://yourname.xdr.us.paloaltonetworks.com). Without this, tickets have no link back to Cortex."
 
   - display: Case Domain
     name: cortex_case_domain
@@ -98,16 +98,16 @@ configuration:
   - display: Jira Case ID Field
     name: jira_case_id_field
     type: 0
-    required: false
+    required: true
     section: Collect
-    additionalinfo: "Custom field ID for Cortex Case ID (e.g. customfield_10062). Enables duplicate detection."
+    additionalinfo: "Custom field ID for Cortex Case ID (e.g. customfield_10062). Required for duplicate detection — without this, tickets will be recreated on every sync cycle."
 
   - display: Jira Issue ID Field
     name: jira_issue_id_field
     type: 0
-    required: false
+    required: true
     section: Collect
-    additionalinfo: "Custom field ID for Cortex Issue ID (e.g. customfield_10063)"
+    additionalinfo: "Custom field ID for Cortex Issue ID (e.g. customfield_10063). Required for duplicate detection on standalone issue sync."
 
   - display: Jira XDR URL Field
     name: jira_xdr_url_field

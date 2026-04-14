@@ -99,9 +99,12 @@ class Config:
             "cortex_base_url": self.cortex_base_url,
             "cortex_api_key": self.cortex_api_key,
             "cortex_api_key_id": self.cortex_api_key_id,
+            "cortex_console_url": self.cortex_console_url,
             "jira_email": self.jira_email,
             "jira_api_token": self.jira_api_token,
             "jira_project_key": self.jira_project_key,
+            "jira_case_id_field": self.jira_case_id_field,
+            "jira_issue_id_field": self.jira_issue_id_field,
         }
         for name, value in required.items():
             if not value or not value.strip():

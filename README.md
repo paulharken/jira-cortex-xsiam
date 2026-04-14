@@ -23,7 +23,7 @@ cortex_jira_sync.yml    # XSIAM integration definition (params, commands, cron)
 
 **No external dependencies** beyond `requests` (pre-installed in XSIAM runtime).
 
-**No Cortex API key required.** When running inside XSIAM, the integration uses native `demisto.executeCommand('core-api-post')` calls to communicate with the Cortex API — no API key generation or management needed. The Cortex API key fields in the integration config are only used for local development/testing via `run_local.py`.
+**Cortex API key required.** The integration authenticates to the Cortex public API using an API key + key ID pair generated in Cortex Settings > API Keys.
 
 ## State Schema
 
@@ -84,19 +84,19 @@ All config is set via XSIAM integration parameters (no `.env` file):
 
 | Parameter | Required | Description |
 |-----------|----------|-------------|
-| `cortex_base_url` | No | Cortex API endpoint (only for local testing) |
-| `cortex_api_key` | No | API authentication key (only for local testing) |
-| `cortex_api_key_id` | No | API key ID (only for local testing) |
-| `cortex_console_url` | No | Console URL for XDR deep links in Jira tickets |
+| `cortex_base_url` | **Yes** | Cortex API endpoint (e.g. `https://api-yourname.xdr.us.paloaltonetworks.com`) |
+| `cortex_api_key` | **Yes** | API authentication key from Cortex Settings > API Keys |
+| `cortex_api_key_id` | **Yes** | Numeric ID associated with the API key |
+| `cortex_console_url` | **Yes** | Console URL for XDR deep links in Jira tickets (e.g. `https://yourname.xdr.us.paloaltonetworks.com`) |
 | `cortex_case_domain` | No | Case domain filter (default: `security`) |
-| `jira_site_url` | Yes | Jira site URL (e.g. `https://site.atlassian.net`) |
+| `jira_site_url` | **Yes** | Jira site URL (e.g. `https://site.atlassian.net`) |
 | `jira_cloud_id` | No | Jira Cloud ID for API routing |
-| `jira_email` | Yes | Jira API auth email |
-| `jira_api_token` | Yes | Jira API token |
-| `jira_project_key` | Yes | Jira project key (e.g. `SEC`) |
+| `jira_email` | **Yes** | Jira API auth email |
+| `jira_api_token` | **Yes** | Jira API token |
+| `jira_project_key` | **Yes** | Jira project key (e.g. `SEC`) |
 | `jira_issue_type` | No | Issue type to create (default: `Alert`) |
-| `jira_case_id_field` | No | Custom field ID for Cortex Case ID |
-| `jira_issue_id_field` | No | Custom field ID for Cortex Issue ID |
+| `jira_case_id_field` | **Yes** | Custom field ID for Cortex Case ID (e.g. `customfield_10062`). **Required for duplicate detection.** |
+| `jira_issue_id_field` | **Yes** | Custom field ID for Cortex Issue ID (e.g. `customfield_10063`). **Required for duplicate detection.** |
 | `jira_xdr_url_field` | No | Custom field ID for XDR URL |
 | `resolution_type_map` | No | JSON: Jira status -> Cortex resolve_reason |
 | `default_resolution_type` | No | Fallback resolve reason (default: `Resolved - Other`) |
@@ -126,13 +126,14 @@ Unmapped statuses fall back to `default_resolution_type`.
 
 ### Prerequisites
 
-1. **Jira API token** — Generate at [id.atlassian.com/manage-profile/security/api-tokens](https://id.atlassian.com/manage-profile/security/api-tokens). The Jira account needs project admin on the target project.
-3. **Jira custom fields** (recommended) — Create three short-text custom fields in your Jira project:
+1. **Cortex API key** — Generate at Cortex Settings > API Keys. Note both the key and its numeric ID.
+2. **Jira API token** — Generate at [id.atlassian.com/manage-profile/security/api-tokens](https://id.atlassian.com/manage-profile/security/api-tokens). The Jira account needs project admin on the target project.
+3. **Jira custom fields** (required) — Create three short-text custom fields in your Jira project:
    - Cortex Case ID
    - Cortex Issue ID
    - XDR URL
 
-   Note their field IDs (e.g. `customfield_10062`). Find IDs via Jira Settings > Issues > Custom fields, or `GET /rest/api/3/field`.
+   Note their field IDs (e.g. `customfield_10062`). Find IDs via Jira Settings > Issues > Custom fields, or `GET /rest/api/3/field`. The Case ID and Issue ID fields are **required** for duplicate detection — without them, the integration will create duplicate tickets on every sync cycle.
 
 ### Step 1: Create a Custom Content Pack
 
@@ -156,14 +157,17 @@ Unmapped statuses fall back to `default_resolution_type`.
 1. Go to **Settings > Integrations > Instances**
 2. Search for `Cortex Jira Sync`
 3. Click **Add Instance**
-4. Fill in the required Jira parameters (no Cortex API key needed — the integration uses native XSIAM API calls):
+4. Fill in the required parameters:
+   - **Cortex API Base URL** — e.g. `https://api-yourname.xdr.us.paloaltonetworks.com`
+   - **Cortex API Key** + **API Key ID** — from prerequisites step 1
+   - **Cortex Console URL** — e.g. `https://yourname.xdr.us.paloaltonetworks.com`
    - **Jira Site URL** — e.g. `https://yoursite.atlassian.net`
    - **Jira Email** — the API account email
-   - **Jira API Token** — from step 1
+   - **Jira API Token** — from prerequisites step 2
    - **Jira Project Key** — e.g. `SEC`
+   - **Jira Case ID Field** + **Issue ID Field** — custom field IDs from prerequisites step 3
 5. Fill in optional fields:
-   - **Cortex Console URL** — enables XDR deep links in Jira ticket descriptions
-   - **Jira Case ID / Issue ID / XDR URL fields** — the custom field IDs from prerequisites
+   - **Jira XDR URL Field** — custom field ID for the XDR deep link
    - **Resolution Type Map** — JSON mapping Jira pre-Done statuses to Cortex resolve reasons
 6. Enable **Fetches incidents** and set **Incidents Fetch Interval** to `1` (minute)
 7. Click **Test** — verifies connectivity to both Cortex and Jira
@@ -178,7 +182,7 @@ Unmapped statuses fall back to `default_resolution_type`.
 4. Verify tickets have:
    - Correct priority (mapped from Cortex severity)
    - XDR deep link in the description (if console URL configured)
-   - Cortex Case ID in the custom field (if configured)
+   - Cortex Case ID populated in the custom field
 
 ### Available Commands
 
@@ -203,8 +207,8 @@ This is useful during initial setup to ensure your Jira workflow statuses align 
 ### Troubleshooting
 
 **Test fails with "Cortex connection failed"**
-- The integration uses native XSIAM API calls — no API key is needed
-- If running locally with `run_local.py`, check the API key and base URL in your `.env` file
+- Verify the API key, key ID, and base URL are correct
+- API key must have the required permissions in Cortex Settings > API Keys
 
 **Test fails with "Jira connection failed"**
 - Verify the email + token pair is correct
@@ -215,7 +219,7 @@ This is useful during initial setup to ensure your Jira workflow statuses align 
 - Set `cortex_console_url` AND `jira_xdr_url_field` — both are required for links
 
 **Duplicate tickets appearing**
-- Set `jira_case_id_field` to enable duplicate detection (JQL check before creation)
+- Verify `jira_case_id_field` and `jira_issue_id_field` are set correctly — these are required and power the JQL duplicate check before ticket creation
 - If duplicates already exist, close the extras in Jira and run `!cortex-jira-reset-state` to re-sync
 
 **First run creates too many tickets**
